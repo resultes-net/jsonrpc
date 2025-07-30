@@ -23,7 +23,7 @@ class JsonRpcBase(_abc.ABC):
         self._started = True
 
         while not self._stop_event.is_set():
-            message = await self._websocket.receive_json(
+            message = await self._websocket.receive(
                 timeout=self._wakeup_period_seconds
             )
 
