@@ -22,6 +22,8 @@ class JsonRpcBase(_abc.ABC):
             raise RuntimeError("Already started.")
         self._started = True
 
+        _LOGGER.info("Starting.")
+
         while not self._stop_event.is_set():
             message = await self._websocket.receive(
                 timeout=self._wakeup_period_seconds

@@ -2,8 +2,11 @@ import asyncio as _asyncio
 import collections.abc as _cabc
 import contextlib as _ctx
 import dataclasses as _dc
+import logging as _log
 
 import aiohttp.web as _ahttpw
+
+_LOGGER = _log.getLogger(__name__)
 
 
 @_dc.dataclass
@@ -25,12 +28,15 @@ class Server:
 
         app = _ahttpw.Application()
 
-        for path in paths:
-            app.add_routes([_ahttpw.get(path, server._create_websocket)])
+        routes = [_ahttpw.get(p, server._create_websocket) for p in paths]
+
+        app.add_routes(routes)
 
         runner = _ahttpw.AppRunner(app)
         await runner.setup()
         site = _ahttpw.TCPSite(runner, port=port)
+
+        _log.info("About to start serving requets on port %d.", port)
         await site.start()
 
         yield server
