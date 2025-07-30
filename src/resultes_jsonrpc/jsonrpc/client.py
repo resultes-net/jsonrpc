@@ -13,10 +13,8 @@ _LOGGER = _log.getLogger(__file__)
 
 
 class JsonRpcClient(_rjjb.JsonRpcBase):
-    def __init__(
-        self, websocket: _tps.WebSocket, wakeup_period_seconds: float = 5.0
-    ) -> None:
-        super().__init__(websocket, wakeup_period_seconds)
+    def __init__(self, websocket: _tps.WebSocket) -> None:
+        super().__init__(websocket)
 
         self._new_message_received_event = _asyncio.Event()
         self._parsed_response_futures_by_request_id = dict[
@@ -84,7 +82,7 @@ class JsonRpcClient(_rjjb.JsonRpcBase):
 
         data = _json.dumps(notification)
 
-        _LOGGER.debug("Sending notification %s.", data)
+        # _LOGGER.debug("Sending notification %s.", data)
         await self._websocket.send_str(data)
 
     def _convert_params(

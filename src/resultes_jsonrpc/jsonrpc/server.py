@@ -88,10 +88,9 @@ class JsonRpcServer(_rjjb.JsonRpcBase):
         self,
         websocket: _tps.WebSocket,
         dispatcher: DispatcherBase = Dispatcher(),
-        wakeup_period_seconds: float = 5.0,
         message_dispatch_context: _tp.Any = None,
     ) -> None:
-        super().__init__(websocket, wakeup_period_seconds)
+        super().__init__(websocket)
         self._message_dispatch_context = message_dispatch_context
         self._dispatcher = dispatcher
 

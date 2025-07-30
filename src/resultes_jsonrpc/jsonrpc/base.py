@@ -9,13 +9,9 @@ _LOGGER = _log.getLogger(__file__)
 
 
 class JsonRpcBase(_abc.ABC):
-    def __init__(
-        self, websocket: _tps.WebSocket, wakeup_period_seconds: float = 5.0
-    ) -> None:
+    def __init__(self, websocket: _tps.WebSocket) -> None:
         self._websocket = websocket
-        self._wakeup_period_seconds = wakeup_period_seconds
         self._started = False
-        self._stop_event = _asyncio.Event()
 
     async def start(self) -> None:
         if self._started:
@@ -24,26 +20,29 @@ class JsonRpcBase(_abc.ABC):
 
         _LOGGER.info("Starting.")
 
-        while not self._stop_event.is_set():
-            message = await self._websocket.receive(
-                timeout=self._wakeup_period_seconds
-            )
+        while True:
+            message = await self._websocket.receive()
 
             if message.type == _ahttp.WSMsgType.TEXT:
-                await self._handle_message(message.data)
+                data = message.data
+                _LOGGER.info("Received message: %s.", data)
+                await self._handle_message(data)
             elif message.type == _ahttp.WSMsgType.ERROR:
                 _LOGGER.error(
                     "WebSocket connectionw as closed with exception %s.",
                     self._websocket.exception(),
                 )
+            elif message.type == _ahttp.WSMsgType.CLOSED:
+                _LOGGER.info("Websocket connection closed.")
+                break
 
-        _LOGGER.info("Websocket connection closed.")
-
-    def stop(self) -> None:
+    async def stop(self) -> None:
         if not self._started:
             raise RuntimeError("Not started.")
 
-        self._stop_event.set()
+        seconds = 5.0
+        async with _asyncio.timeout(seconds):
+            await self._websocket.close()
 
     @_abc.abstractmethod
     async def _handle_message(self, data: str) -> None:
