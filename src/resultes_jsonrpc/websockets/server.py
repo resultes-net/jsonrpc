@@ -2,7 +2,6 @@ import asyncio as _asyncio
 import collections.abc as _cabc
 import contextlib as _ctx
 import dataclasses as _dc
-import typing as _tp
 
 import aiohttp.web as _ahttpw
 
