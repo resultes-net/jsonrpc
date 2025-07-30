@@ -39,6 +39,8 @@ class JsonRpcBase(_abc.ABC):
     async def stop(self) -> None:
         if not self._started:
             raise RuntimeError("Not started.")
+        
+        _LOGGER.info("Closing websocket connection.")
 
         seconds = 5.0
         async with _asyncio.timeout(seconds):
