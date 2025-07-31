@@ -1,6 +1,5 @@
 import collections.abc as _cabc
 import typing as _tp
-import aiohttp as _aiohttp
 
 type JsonScalar = bool | int | float | str
 type JsonStructured = _cabc.Sequence["Json"] | _cabc.Mapping[str, "Json"]
@@ -25,8 +24,3 @@ class Response(_tp.TypedDict):
     result: Json
 
 
-class WebSocket(_tp.Protocol):
-    async def close(self) -> bool: ...
-    async def receive(self) -> _aiohttp.WSMessage: ...
-    async def send_str(self, data: str) -> None: ...
-    def exception(self) -> BaseException | None: ...

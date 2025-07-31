@@ -6,22 +6,22 @@ import logging as _log
 import typing as _tp
 
 import jsonrpcclient as _jrpcc
-import resultes_jsonrpc.jsonrpc.base as _rjjb
+import resultes_jsonrpc.websockets.types
 import resultes_jsonrpc.jsonrpc.types as _tps
 
 _LOGGER = _log.getLogger(__file__)
 
 
-class JsonRpcClient(_rjjb.JsonRpcBase):
-    def __init__(self, websocket: _tps.WebSocket) -> None:
-        super().__init__(websocket)
+class JsonRpcClient(resultes_jsonrpc.websockets.types.MessageReceiver):
+    def __init__(self, websocket: resultes_jsonrpc.websockets.types.WriteWebsocket) -> None:
+        self._websocket = websocket
 
         self._new_message_received_event = _asyncio.Event()
         self._parsed_response_futures_by_request_id = dict[
             int, _asyncio.Future[_jrpcc.responses.Response]
         ]()
 
-    async def _handle_message(self, data: str) -> None:
+    async def on_message_received(self, data: str) -> None:
         parsed_response = _jrpcc.parse_json(data)
 
         parsed_responses = (

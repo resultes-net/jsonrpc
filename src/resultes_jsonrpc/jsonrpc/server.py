@@ -5,8 +5,7 @@ import logging as _log
 import typing as _tp
 
 import jsonrpcserver as _jrpcs
-import resultes_jsonrpc.jsonrpc.base as _rjjb
-import resultes_jsonrpc.jsonrpc.types as _tps
+import resultes_jsonrpc.websockets.types as _tps
 
 _LOGGER = _log.getLogger(__file__)
 
@@ -14,16 +13,16 @@ _LOGGER = _log.getLogger(__file__)
 class DispatcherBase(_abc.ABC):
     @_abc.abstractmethod
     async def dispatch(
-        self, data: str, context: _tp.Any, websocket: _tps.WebSocket
+        self, data: str, context: _tp.Any, websocket: _tps.WriteWebsocket
     ) -> None:
         raise NotImplementedError()
 
 
 class Dispatcher(DispatcherBase):
     async def dispatch(
-        self, data: str, context: _tp.Any, websocket: _tps.WebSocket
+        self, data: str, context: _tp.Any, websocket: _tps.WriteWebsocket
     ) -> None:
-        if result := await _jrpcs.async_dispatch(data, context):
+        if result := await _jrpcs.async_dispatch(data, context=context):
             await websocket.send_str(result)
 
 
@@ -40,7 +39,7 @@ class TaskSpawningDispatcher(
 
     async def __aenter__(self) -> _tp.Self:
         if self._task_group:
-            raise RuntimeError("Already started.")
+            raise RuntimeError("Already entered.")
 
         self._task_group = _asyncio.TaskGroup()
 
@@ -48,19 +47,19 @@ class TaskSpawningDispatcher(
 
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback) -> bool:
+    async def __aexit__(self, exc_type, exc_value, traceback) -> bool | None:
         if not self._task_group:
-            raise RuntimeError("Not started.")
+            raise RuntimeError("Not entered.")
 
         try:
-            await self._task_group.__aexit__(exc_type, exc_value, traceback)
+            return await self._task_group.__aexit__(exc_type, exc_value, traceback)
         except* _TerminateTaskGroupException:
             pass
 
         return False
 
     async def dispatch(
-        self, data: str, context: _tp.Any, websocket: _tps.WebSocket
+        self, data: str, context: _tp.Any, websocket: _tps.WriteWebsocket
     ) -> None:
         if not self._task_group:
             raise RuntimeError("Not entered.")
@@ -71,7 +70,7 @@ class TaskSpawningDispatcher(
 
         _LOGGER.info("New task %s for dispatching request created.", task.get_name())
 
-    async def cancel_tasks(self) -> None:
+    def cancel_tasks(self) -> None:
         _LOGGER.info("Terminating task group.")
 
         if not self._task_group:
@@ -83,18 +82,18 @@ class TaskSpawningDispatcher(
         self._task_group.create_task(raise_exception())
 
 
-class JsonRpcServer(_rjjb.JsonRpcBase):
+class JsonRpcServer(_tps.MessageReceiver):
     def __init__(
         self,
-        websocket: _tps.WebSocket,
+        websocket: _tps.WriteWebsocket,
         dispatcher: DispatcherBase = Dispatcher(),
         message_dispatch_context: _tp.Any = None,
     ) -> None:
-        super().__init__(websocket)
+        self._websocket = websocket
         self._message_dispatch_context = message_dispatch_context
         self._dispatcher = dispatcher
 
-    async def _handle_message(self, data: str) -> None:
+    async def on_message_received(self, data: str) -> None:
         await self._dispatcher.dispatch(
             data, self._message_dispatch_context, self._websocket
         )
