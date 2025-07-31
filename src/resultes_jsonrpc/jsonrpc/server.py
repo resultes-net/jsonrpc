@@ -70,66 +70,47 @@ class DispatcherBase(_abc.ABC):
         raise NotImplementedError()
 
 
-class Dispatcher(DispatcherBase):
+class SyncDispatcher(DispatcherBase):
     async def dispatch(
+        self, data: str, context: _tp.Any, websocket: _tps.WriteWebsocket
+    ) -> None:
+        if result := _jrpcs.dispatch(data, context=context):
+            await websocket.send_str(result)
+
+
+class AsyncTaskSpawningDispatcher(DispatcherBase):
+    def __init__(self, task_group: _asyncio.TaskGroup) -> None:
+        self._task_group = task_group
+
+    @staticmethod
+    async def create() -> "AsyncTaskSpawningDispatcher":
+        task_group = await _asyncio.TaskGroup().__aenter__()
+        return AsyncTaskSpawningDispatcher(task_group)
+
+    async def dispatch(
+        self, data: str, context: _tp.Any, websocket: _tps.WriteWebsocket
+    ) -> None:
+        if not self._task_group:
+            raise RuntimeError("Not entered.")
+
+        coroutine = self._async_dispatch(data, context, websocket)
+
+        task = self._task_group.create_task(coroutine)
+
+        _LOGGER.info("New task %s for dispatching request created.", task.get_name())
+
+    async def _async_dispatch(
         self, data: str, context: _tp.Any, websocket: _tps.WriteWebsocket
     ) -> None:
         if result := await _jrpcs.async_dispatch(data, context=context):
             await websocket.send_str(result)
 
 
-class _TerminateTaskGroupException(Exception):
-    pass
-
-
-class TaskSpawningDispatcher(DispatcherBase):
-    def __init__(self, task_group: _asyncio.TaskGroup) -> None:
-        self._dispatcher = Dispatcher()
-        self._task_group = task_group
-
-    @staticmethod
-    async def create() -> "TaskSpawningDispatcher":
-        task_group = await _asyncio.TaskGroup().__aenter__()
-        return TaskSpawningDispatcher(task_group)
-
-    async def dispatch(
-        self, data: str, context: _tp.Any, websocket: _tps.WriteWebsocket
-    ) -> None:
-        if not self._task_group:
-            raise RuntimeError("Not entered.")
-
-        coroutine = self._dispatcher.dispatch(data, context, websocket)
-
-        task = self._task_group.create_task(coroutine)
-
-        _LOGGER.info("New task %s for dispatching request created.", task.get_name())
-
-    async def cancel_and_join_tasks(self) -> None:
-        if not self._task_group:
-            raise RuntimeError("Not entered.")
-
-        _LOGGER.info("Terminating task group.")
-
-        async def raise_exception() -> _tp.NoReturn:
-            raise _TerminateTaskGroupException()
-
-        self._task_group.create_task(raise_exception())
-
-        _LOGGER.info("Joining tasks...")
-
-        try:
-            await self._task_group.__aexit__(None, None, None)
-        except* _TerminateTaskGroupException:
-            pass
-
-        _LOGGER.info("...Done")
-
-
 class JsonRpcServer(_tps.MessageReceiver):
     def __init__(
         self,
         websocket: _tps.WriteWebsocket,
-        dispatcher: DispatcherBase = Dispatcher(),
+        dispatcher: DispatcherBase,
         context: ContextBase = ContextBase(),
     ) -> None:
         self._websocket = websocket
