@@ -20,6 +20,5 @@ async def start_receiving_messages(
                 "WebSocket connectionw as closed with exception %s.",
                 websocket.exception(),
             )
-        elif message.type == _ahttp.WSMsgType.CLOSED:
-            _LOGGER.info("Websocket connection closed.")
-            break
+
+    _LOGGER.info("Websocket connection closed.")
