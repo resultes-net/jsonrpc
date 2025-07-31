@@ -6,14 +6,14 @@ import logging as _log
 import typing as _tp
 
 import jsonrpcclient as _jrpcc
-import resultes_jsonrpc.websockets.types
 import resultes_jsonrpc.jsonrpc.types as _tps
+import resultes_jsonrpc.websockets.types as _rjwt
 
 _LOGGER = _log.getLogger(__file__)
 
 
-class JsonRpcClient(resultes_jsonrpc.websockets.types.MessageReceiver):
-    def __init__(self, websocket: resultes_jsonrpc.websockets.types.WriteWebsocket) -> None:
+class JsonRpcClient(_rjwt.MessageReceiver):
+    def __init__(self, websocket: _rjwt.WriteWebsocket) -> None:
         self._websocket = websocket
 
         self._new_message_received_event = _asyncio.Event()
@@ -82,7 +82,7 @@ class JsonRpcClient(resultes_jsonrpc.websockets.types.MessageReceiver):
 
         data = _json.dumps(notification)
 
-        # _LOGGER.debug("Sending notification %s.", data)
+        _LOGGER.debug("Sending notification %s.", data)
         await self._websocket.send_str(data)
 
     def _convert_params(
@@ -92,6 +92,6 @@ class JsonRpcClient(resultes_jsonrpc.websockets.types.MessageReceiver):
             return None
 
         try:
-            return tuple(params)
+            return dict(params)
         except ValueError:
-            return params
+            return tuple(params)

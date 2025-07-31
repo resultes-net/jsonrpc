@@ -3,8 +3,8 @@ import contextlib as _ctx
 import logging as _log
 import typing as _tp
 
-import aiohttp as _ahttp
 import aiohttp.web as _ahttpw
+import resultes_jsonrpc.websockets.common as _rjwcom
 import resultes_jsonrpc.websockets.types as _rjwt
 
 _LOGGER = _log.getLogger(__name__)
@@ -25,7 +25,7 @@ class Server:
         self._message_receiver_factories = message_receiver_factories_by_path
 
     @_ctx.asynccontextmanager
-    async def serve(self) -> _cabc.AsyncIterator[None]:
+    async def run(self) -> _cabc.AsyncIterator[None]:
         app = _ahttpw.Application()
 
         routes = [
@@ -58,18 +58,6 @@ class Server:
 
         message_receiver = factory(websocket)
 
-        async for message in websocket:
-            if message.type == _ahttp.WSMsgType.TEXT:
-                data = message.data
-                _LOGGER.info("Received message: %s.", data)
-                await message_receiver.on_message_received(data)
-            elif message.type == _ahttp.WSMsgType.ERROR:
-                _LOGGER.error(
-                    "WebSocket connectionw as closed with exception %s.",
-                    websocket.exception(),
-                )
-            elif message.type == _ahttp.WSMsgType.CLOSED:
-                _LOGGER.info("Websocket connection closed.")
-                break
+        await _rjwcom.start_receiving_messages(websocket, message_receiver)
 
         return websocket
