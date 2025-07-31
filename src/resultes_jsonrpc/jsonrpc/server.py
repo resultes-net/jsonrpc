@@ -79,27 +79,7 @@ class SyncDispatcher(DispatcherBase):
 
 
 class AsyncTaskSpawningDispatcher(DispatcherBase):
-    def __init__(self, task_group: _asyncio.TaskGroup) -> None:
-        self._task_group = task_group
-
-    @staticmethod
-    async def create() -> "AsyncTaskSpawningDispatcher":
-        task_group = await _asyncio.TaskGroup().__aenter__()
-        return AsyncTaskSpawningDispatcher(task_group)
-
     async def dispatch(
-        self, data: str, context: _tp.Any, websocket: _tps.WriteWebsocket
-    ) -> None:
-        if not self._task_group:
-            raise RuntimeError("Not entered.")
-
-        coroutine = self._async_dispatch(data, context, websocket)
-
-        task = self._task_group.create_task(coroutine)
-
-        _LOGGER.info("New task %s for dispatching request created.", task.get_name())
-
-    async def _async_dispatch(
         self, data: str, context: _tp.Any, websocket: _tps.WriteWebsocket
     ) -> None:
         if result := await _jrpcs.async_dispatch(data, context=context):
