@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -14,7 +14,8 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
-dynamic = ["version", "dependencies"]
+version = "0.0.1"
+dynamic = ["dependencies"]
 
 [tool.setuptools.package-data]
 resultes_server = ["py.typed"]
