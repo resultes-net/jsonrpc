@@ -34,25 +34,17 @@ class ContextBase:
         self._tasks.remove(task)
 
 
-class JsonRpcMethod[C: ContextBase, **P](_tp.Protocol):
-    def __call__(
-        self, context: C, *args: P.args, **kwargs: P.kwargs
-    ) -> _cabc.Awaitable[_jrpcs.Result]: ...
+type AsyncJsonRpcMethod[**P] = _tp.Callable[P, _cabc.Awaitable[_jrpcs.Result]]
 
 
-def cancellable_jrpcs_method[C: ContextBase, **P](
-    method: JsonRpcMethod[C, P],
-) -> JsonRpcMethod[C, P]:
+def cancellable_async_jrpcs_method[**P](
+    method: AsyncJsonRpcMethod[P],
+) -> AsyncJsonRpcMethod[P]:
     @_jrpcs.method()
     @_ft.wraps(method)
-    async def nested(context: C, *args: P.args, **kwargs: P.kwargs) -> _jrpcs.Result:
+    async def nested(*args: P.args, **kwargs: P.kwargs) -> _jrpcs.Result:
         try:
-            current_task = _asyncio.current_task()
-            assert current_task
-
-            context.register_task(current_task)
-
-            return await method(context, *args, **kwargs)
+            return await method(*args, **kwargs)
         except _asyncio.CancelledError:
             _LOGGER.warning("The request was cancelled on the server.")
             return _jrpcs.Error(
@@ -79,7 +71,16 @@ class SyncDispatcher(DispatcherBase):
 
 
 class AsyncTaskSpawningDispatcher(DispatcherBase):
+    def __init__(self, task_group: _asyncio.TaskGroup) -> None:
+        self._task_group = task_group
+
     async def dispatch(
+        self, data: str, context: _tp.Any, websocket: _tps.WriteWebsocket
+    ) -> None:
+        coroutine = self._dispatch_impl(data, context, websocket)
+        self._task_group.create_task(coroutine)
+
+    async def _dispatch_impl(
         self, data: str, context: _tp.Any, websocket: _tps.WriteWebsocket
     ) -> None:
         if result := await _jrpcs.async_dispatch(data, context=context):
@@ -91,7 +92,7 @@ class JsonRpcServer(_tps.MessageReceiver):
         self,
         websocket: _tps.WriteWebsocket,
         dispatcher: DispatcherBase,
-        context: ContextBase = ContextBase(),
+        context: _tp.Any,
     ) -> None:
         self._websocket = websocket
         self._context = context
@@ -99,21 +100,3 @@ class JsonRpcServer(_tps.MessageReceiver):
 
     async def on_message_received(self, data: str) -> None:
         await self._dispatcher.dispatch(data, self._context, self._websocket)
-
-    async def cancel_and_join_requests(self) -> None:
-        tasks = self._context.tasks()
-
-        _LOGGER.info("Cancelling %i running task(s).", len(tasks))
-
-        for task in tasks:
-            task.cancel()
-
-        _LOGGER.info("Joining cancelled tasks...")
-
-        for task in tasks:
-            try:
-                await task
-            except _asyncio.CancelledError:
-                pass
-
-        _LOGGER.info("...DONE.")
