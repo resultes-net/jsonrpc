@@ -53,6 +53,7 @@ class JsonRpcClient(_rjwt.MessageReceiver):
             case _jrpcc.Ok(result):
                 return result
             case _jrpcc.Error() as error:
+                _LOGGER.error("Got error %s: %s", error.message, error.data)
                 raise RuntimeError(error)
             case _:
                 _tp.assert_never(_)
