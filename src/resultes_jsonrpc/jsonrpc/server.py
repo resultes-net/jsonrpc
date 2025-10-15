@@ -3,6 +3,7 @@ import asyncio as _asyncio
 import collections.abc as _cabc
 import functools as _ft
 import logging as _log
+import traceback as _tb
 import typing as _tp
 
 import jsonrpcserver as _jrpcs
@@ -50,6 +51,10 @@ def cancellable_async_jrpcs_method[**P](
             return _jrpcs.Error(
                 _jrpcsc.ERROR_SERVER_ERROR, "The request was cancelled on the server."
             )
+        except Exception as exception:
+            _LOGGER.error("Exception occurred: %s", exc_info=exception)
+            traceback = "\n".join(_tb.format_exception(exception))
+            return _jrpcs.Error(_jrpcsc.ERROR_SERVER_ERROR, str(exception), traceback)
 
     return nested
 
