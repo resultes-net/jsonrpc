@@ -83,7 +83,7 @@ class JsonRpcClient(_rjwt.MessageReceiver):
 
         data = _json.dumps(notification)
 
-        _LOGGER.info("Sending notification %s.", data)
+        _LOGGER.debug("Sending notification %s.", data)
         await self._websocket.send_str(data)
 
     def _convert_params(
