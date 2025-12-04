@@ -35,7 +35,7 @@ class ContextBase:
         self._tasks.remove(task)
 
 
-type AsyncJsonRpcMethod[**P] = _tp.Callable[P, _cabc.Awaitable[_jrpcs.Result]]
+type AsyncJsonRpcMethod[**P] = _cabc.Callable[P, _cabc.Awaitable[_jrpcs.Result]]
 
 
 def cancellable_async_jrpcs_method[**P](

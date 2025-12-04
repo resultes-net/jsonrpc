@@ -1,7 +1,6 @@
 import collections.abc as _cabc
 import contextlib as _ctx
 import logging as _log
-import typing as _tp
 
 import aiohttp.web as _ahttpw
 import resultes_jsonrpc.websockets.common as _rjwcom
@@ -10,7 +9,7 @@ import resultes_jsonrpc.websockets.types as _rjwt
 _LOGGER = _log.getLogger(__name__)
 
 
-type MessageReceiverFactory = _tp.Callable[
+type MessageReceiverFactory = _cabc.Callable[
     [_rjwt.WriteWebsocket], _rjwt.MessageReceiver
 ]
 

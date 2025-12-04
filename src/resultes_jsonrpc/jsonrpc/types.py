@@ -2,7 +2,8 @@ import collections.abc as _cabc
 import typing as _tp
 
 type JsonScalar = bool | int | float | str
-type JsonStructured = _cabc.Sequence["Json"] | _cabc.Mapping[str, "Json"]
+type JsonObject = _cabc.Mapping[str, "Json"]
+type JsonStructured = _cabc.Sequence["Json"] | JsonObject
 type Json = JsonScalar | JsonStructured
 
 
@@ -22,5 +23,3 @@ class Notification(RequestBase):
 class Response(_tp.TypedDict):
     id: int
     result: Json
-
-
