@@ -8,7 +8,7 @@ import resultes_jsonrpc.websockets.types as _rjwt
 _LOGGER = _log.getLogger(__name__)
 
 
-class WebsocketClient:
+class Client:
     def __init__(
         self,
         websocket: _ahttp.ClientWebSocketResponse,
@@ -21,7 +21,7 @@ class WebsocketClient:
     def start(self) -> None:
         if self._reader_task:
             raise RuntimeError("Already started.")
-        
+
         _LOGGER.info("Starting.")
 
         coroutine = _rjwcom.start_receiving_messages(
