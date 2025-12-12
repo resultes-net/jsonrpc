@@ -2,7 +2,6 @@ import abc as _abc
 import asyncio as _asyncio
 import collections.abc as _cabc
 import contextlib as _ctx
-import dataclasses as _dc
 import functools as _ft
 import json as _json
 import logging as _log
@@ -150,12 +149,6 @@ class AsyncTaskSpawningDispatcher(DispatcherBase):
             await websocket.send_str(result)
 
 
-@_dc.dataclass
-class Argument:
-    name: str
-    value: _pyd.BaseModel
-
-
 class Connection(_rjwt.MessageReceiver):
     def __init__(
         self,
@@ -250,13 +243,9 @@ class Connection(_rjwt.MessageReceiver):
         await self._websocket.send_str(data)
 
     async def send_notification_base_model(
-        self, method: str, argument: Argument | None = None
+        self, method: str, value: _pyd.BaseModel | None = None
     ) -> None:
-        if argument:
-            value_data = argument.value.model_dump()
-            data = {argument.name: value_data}
-        else:
-            data = None
+        data = {"value": value.model_dump()} if value else None
 
         await self.send_notification_data(method, data)
 
