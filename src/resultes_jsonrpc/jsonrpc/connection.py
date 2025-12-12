@@ -111,6 +111,19 @@ class SyncDispatcher(DispatcherBase):
             await websocket.send_str(result)
 
 
+class AsyncDispatcher(DispatcherBase):
+    @_tp.override
+    async def dispatch(
+        self,
+        data: _rjjt.JsonStructured,
+        context: _tp.Any,
+        websocket: _rjwt.WriteWebsocket,
+    ) -> None:
+        json = _json.dumps(data)
+        if result := await _jrpcs.async_dispatch(json, context=context):
+            await websocket.send_str(result)
+
+
 class AsyncTaskSpawningDispatcher(DispatcherBase):
     def __init__(self, task_group: _asyncio.TaskGroup) -> None:
         self._task_group = task_group
@@ -126,7 +139,10 @@ class AsyncTaskSpawningDispatcher(DispatcherBase):
         self._task_group.create_task(coroutine)
 
     async def _dispatch_impl(
-        self, data: _rjjt.JsonStructured, context: _tp.Any, websocket: _rjwt.WriteWebsocket
+        self,
+        data: _rjjt.JsonStructured,
+        context: _tp.Any,
+        websocket: _rjwt.WriteWebsocket,
     ) -> None:
         json = _json.dumps(data)
         if result := await _jrpcs.async_dispatch(json, context=context):
