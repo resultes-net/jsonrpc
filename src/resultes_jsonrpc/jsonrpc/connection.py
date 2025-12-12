@@ -168,7 +168,7 @@ class Connection(_rjwt.MessageReceiver):
     @_tp.override
     async def on_message_received(self, json: str) -> None:
         data = _json.loads(json)
-        is_response = "error" in json or "result" in data
+        is_response = "error" in data or "result" in data
         if is_response:
             await self._on_response_received(data)
         else:
