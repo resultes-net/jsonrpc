@@ -44,17 +44,18 @@ def cancellable_async_jrpcs_method[**P](
     return nested
 
 
-def cancellable_async_validated_jrpcs_method[T: _pyd.BaseModel, C](
+class AsyncValidatedMethod[C, T: _pyd.BaseModel](_tp.Protocol):
+    async def __call__(self, context: C, value: T) -> _jrpcs.Result:
+        raise NotImplementedError()
+
+
+def cancellable_async_validated_jrpcs_method[C, T: _pyd.BaseModel](
     clazz: type[T],
 ) -> _cabc.Callable[
-    [AsyncJsonRpcMethod[[C, T]]], AsyncJsonRpcMethod[[C, _rjjt.JsonObject]]
+    [AsyncValidatedMethod[C, T]], AsyncJsonRpcMethod[[C, _rjjt.JsonObject]]
 ]:
-    """
-    Wrapped methods name must be `value`.
-    """
-
     def create_validating_method(
-        validated_method: AsyncJsonRpcMethod[[C, T]],
+        validated_method: AsyncValidatedMethod[C, T],
     ) -> AsyncJsonRpcMethod[[C, _rjjt.JsonObject]]:
         @_jrpcs.method()
         @_ft.wraps(validated_method)
