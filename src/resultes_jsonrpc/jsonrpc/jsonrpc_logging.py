@@ -5,7 +5,7 @@ import logging as _log
 import queue as _queue
 import typing as _tp
 
-import resultes_jsonrpc.jsonrpc.client as _rjjc
+import resultes_jsonrpc.jsonrpc.connection as _rjjc
 import resultes_jsonrpc.jsonrpc.types as _tps
 
 _LOGGER = _log.getLogger(__name__)
@@ -25,11 +25,11 @@ class JsonRpcLogHandler(_log.Handler):
     _METHOD = "post_log_message"
 
     def __init__(
-        self, logging_client: _rjjc.JsonRpcClient, level: int = _log.NOTSET
+        self, jsonrpc_connection: _rjjc.Connection, level: int = _log.NOTSET
     ) -> None:
         super().__init__(level)
 
-        self._logging_client = logging_client
+        self._jsonrpc_connection = jsonrpc_connection
 
         self._queue = _queue.Queue[FormattedRecord]()
         self._is_queue_shut_down = False
@@ -48,7 +48,7 @@ class JsonRpcLogHandler(_log.Handler):
                 formatted_record = await loop.run_in_executor(executor, self._queue.get)
 
                 params = formatted_record.json
-                await self._logging_client.send_notification(
+                await self._jsonrpc_connection.send_notification_data(
                     self._METHOD, params=params
                 )
         except _queue.ShutDown:

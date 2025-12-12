@@ -49,16 +49,20 @@ def cancellable_async_validated_jrpcs_method[T: _pyd.BaseModel, C](
 ) -> _cabc.Callable[
     [AsyncJsonRpcMethod[[C, T]]], AsyncJsonRpcMethod[[C, _rjjt.JsonObject]]
 ]:
+    """
+    Wrapped methods name must be `value`.
+    """
+
     def create_validating_method(
         validated_method: AsyncJsonRpcMethod[[C, T]],
     ) -> AsyncJsonRpcMethod[[C, _rjjt.JsonObject]]:
         @_jrpcs.method()
         @_ft.wraps(validated_method)
         async def validating_method(
-            data: _rjjt.JsonObject, context: C
+            context: C, value: _rjjt.JsonObject
         ) -> _jrpcs.Result:
             try:
-                instance = clazz(**data)
+                instance = clazz(**value)
             except _pyd.ValidationError as validation_error:
                 errors = validation_error.errors()
                 return _jrpcs.InvalidParams(errors)
@@ -86,16 +90,24 @@ def cancellable_async_validated_jrpcs_method[T: _pyd.BaseModel, C](
 class DispatcherBase(_abc.ABC):
     @_abc.abstractmethod
     async def dispatch(
-        self, data: str, context: _tp.Any, websocket: _rjwt.WriteWebsocket
+        self,
+        data: _rjjt.JsonStructured,
+        context: _tp.Any,
+        websocket: _rjwt.WriteWebsocket,
     ) -> None:
         raise NotImplementedError()
 
 
 class SyncDispatcher(DispatcherBase):
+    @_tp.override
     async def dispatch(
-        self, data: str, context: _tp.Any, websocket: _rjwt.WriteWebsocket
+        self,
+        data: _rjjt.JsonStructured,
+        context: _tp.Any,
+        websocket: _rjwt.WriteWebsocket,
     ) -> None:
-        if result := _jrpcs.dispatch(data, context=context):
+        json = _json.dumps(data)
+        if result := _jrpcs.dispatch(json, context=context):
             await websocket.send_str(result)
 
 
@@ -103,16 +115,21 @@ class AsyncTaskSpawningDispatcher(DispatcherBase):
     def __init__(self, task_group: _asyncio.TaskGroup) -> None:
         self._task_group = task_group
 
+    @_tp.override
     async def dispatch(
-        self, data: str, context: _tp.Any, websocket: _rjwt.WriteWebsocket
+        self,
+        data: _rjjt.JsonStructured,
+        context: _tp.Any,
+        websocket: _rjwt.WriteWebsocket,
     ) -> None:
         coroutine = self._dispatch_impl(data, context, websocket)
         self._task_group.create_task(coroutine)
 
     async def _dispatch_impl(
-        self, data: str, context: _tp.Any, websocket: _rjwt.WriteWebsocket
+        self, data: _rjjt.JsonStructured, context: _tp.Any, websocket: _rjwt.WriteWebsocket
     ) -> None:
-        if result := await _jrpcs.async_dispatch(data, context=context):
+        json = _json.dumps(data)
+        if result := await _jrpcs.async_dispatch(json, context=context):
             await websocket.send_str(result)
 
 
@@ -138,18 +155,20 @@ class Connection(_rjwt.MessageReceiver):
             int, _asyncio.Future[_jrpcc.responses.Response]
         ]()
 
-    async def on_message_received(self, data: str) -> None:
-        is_request = "error" in data or "result" in data
-        if is_request:
-            await self._on_request_received(data)
-        else:
+    @_tp.override
+    async def on_message_received(self, json: str) -> None:
+        data = _json.loads(json)
+        is_response = "error" in json or "result" in data
+        if is_response:
             await self._on_response_received(data)
+        else:
+            await self._on_request_received(data)
 
-    async def _on_request_received(self, data: str) -> None:
+    async def _on_request_received(self, data: _rjjt.JsonStructured) -> None:
         await self._dispatcher.dispatch(data, self._context, self._websocket)
 
-    async def _on_response_received(self, data: str) -> None:
-        parsed_response = _jrpcc.parse_json(data)
+    async def _on_response_received(self, data: _rjjt.JsonStructured) -> None:
+        parsed_response = _jrpcc.parse(data)
 
         parsed_responses = (
             [parsed_response]

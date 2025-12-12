@@ -16,5 +16,5 @@ class ReadWebSocket(_tp.Protocol):
 
 class MessageReceiver(_abc.ABC):
     @_abc.abstractmethod
-    async def on_message_received(self, data: str) -> None:
+    async def on_message_received(self, json: str) -> None:
         raise NotImplementedError()

@@ -1,4 +1,5 @@
 import logging as _log
+
 import aiohttp as _ahttp
 import resultes_jsonrpc.websockets.types as _rjwt
 
@@ -12,9 +13,9 @@ async def start_receiving_messages(
 
     async for message in websocket:
         if message.type == _ahttp.WSMsgType.TEXT:
-            data = message.data
-            _LOGGER.debug("Received message: %s.", data)
-            await message_receiver.on_message_received(data)
+            json = message.data
+            _LOGGER.debug("Received message: %s.", json)
+            await message_receiver.on_message_received(json)
         elif message.type == _ahttp.WSMsgType.ERROR:
             _LOGGER.error(
                 "WebSocket connectionw as closed with exception %s.",
