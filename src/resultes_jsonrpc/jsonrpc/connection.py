@@ -37,7 +37,7 @@ def cancellable_async_jrpcs_method[**P](
             )
         except Exception as exception:
             _LOGGER.error("Exception occurred: %s", exc_info=exception)
-            traceback = "\n".join(_tb.format_exception(exception))
+            traceback = "".join(_tb.format_exception(exception))
             return _jrpcs.Error(_jrpcsc.ERROR_SERVER_ERROR, str(exception), traceback)
 
     return nested
@@ -64,8 +64,8 @@ def cancellable_async_validated_jrpcs_method[C, T: _pyd.BaseModel](
             try:
                 instance = clazz(**value)
             except _pyd.ValidationError as validation_error:
-                errors = validation_error.errors()
-                return _jrpcs.InvalidParams(errors)
+                _LOGGER.error("Invalid parameters: %s.", validation_error)
+                return _jrpcs.InvalidParams(str(validation_error))
 
             try:
                 return await validated_method(context, instance)
@@ -77,7 +77,7 @@ def cancellable_async_validated_jrpcs_method[C, T: _pyd.BaseModel](
                 )
             except Exception as exception:
                 _LOGGER.error("Exception occurred: %s", exc_info=exception)
-                traceback = "\n".join(_tb.format_exception(exception))
+                traceback = "".join(_tb.format_exception(exception))
                 return _jrpcs.Error(
                     _jrpcsc.ERROR_SERVER_ERROR, str(exception), traceback
                 )
