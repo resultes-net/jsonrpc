@@ -191,7 +191,7 @@ class Connection(_rjwt.MessageReceiver):
             future.set_result(parsed_response)
 
     async def send_request_and_check_and_get_response(
-        self, method: str, params: _tps.JsonStructured | None = None
+        self, method: str, params: _tps.JsonStructured | None = None, timeout_seconds: float | None = None
     ) -> _tps.Json:
         converted_params = self._convert_params(params)
 
@@ -202,7 +202,9 @@ class Connection(_rjwt.MessageReceiver):
         _LOGGER.debug("Sending request %s.", data)
         await self._websocket.send_str(data)
 
-        response = await self._get_response(request["id"])
+        async with _asyncio.timeout(timeout_seconds):
+            response = await self._get_response(request["id"])
+            
         _LOGGER.debug("Got response %s.", response)
 
         match response:
