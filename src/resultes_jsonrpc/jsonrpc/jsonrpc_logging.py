@@ -1,24 +1,18 @@
 import asyncio as _asyncio
 import concurrent.futures as _cf
-import dataclasses as _dc
 import logging as _log
 import queue as _queue
 import typing as _tp
 
+import pydantic as _pd
 import resultes_jsonrpc.jsonrpc.connection as _rjjc
-import resultes_jsonrpc.jsonrpc.types as _tps
 
 _LOGGER = _log.getLogger(__name__)
 
 
-@_dc.dataclass
-class FormattedRecord:
+class FormattedRecord(_pd.BaseModel):
     level: int
     message: str
-
-    @property
-    def json(self) -> _tps.JsonStructured:
-        return {"level": self.level, "message": self.message}
 
 
 class JsonRpcLogHandler(_log.Handler):
@@ -47,7 +41,7 @@ class JsonRpcLogHandler(_log.Handler):
             while True:
                 formatted_record = await loop.run_in_executor(executor, self._queue.get)
 
-                params = formatted_record.json
+                params = formatted_record.model_dump()
                 await self._jsonrpc_connection.send_notification_data(
                     self._METHOD, params=params
                 )
@@ -76,7 +70,7 @@ class JsonRpcLogHandler(_log.Handler):
                 return
 
         message = self.format(record)
-        formatted_record = FormattedRecord(record.levelno, message)
+        formatted_record = FormattedRecord(level=record.levelno, message=message)
 
         try:
             self._queue.put_nowait(formatted_record)
