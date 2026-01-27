@@ -41,9 +41,9 @@ class JsonRpcLogHandler(_log.Handler):
             while True:
                 formatted_record = await loop.run_in_executor(executor, self._queue.get)
 
-                params = formatted_record.model_dump()
-                await self._jsonrpc_connection.send_notification_data(
-                    self._METHOD, params=params
+                value = formatted_record
+                await self._jsonrpc_connection.send_notification_base_model(
+                    self._METHOD, value
                 )
         except _queue.ShutDown:
             pass
