@@ -191,7 +191,10 @@ class Connection(_rjwt.MessageReceiver):
             future.set_result(parsed_response)
 
     async def send_request_and_check_and_get_response(
-        self, method: str, params: _tps.JsonStructured | None = None, timeout_seconds: float | None = None
+        self,
+        method: str,
+        params: _tps.JsonStructured | None = None,
+        timeout_seconds: float | None = None,
     ) -> _tps.Json:
         converted_params = self._convert_params(params)
 
@@ -204,7 +207,7 @@ class Connection(_rjwt.MessageReceiver):
 
         async with _asyncio.timeout(timeout_seconds):
             response = await self._get_response(request["id"])
-            
+
         _LOGGER.debug("Got response %s.", response)
 
         match response:
@@ -247,7 +250,7 @@ class Connection(_rjwt.MessageReceiver):
     async def send_notification_base_model(
         self, method: str, value: _pyd.BaseModel | None = None
     ) -> None:
-        data = {"value": value.model_dump()} if value else None
+        data = {"value": value.model_dump(mode="json")} if value else None
 
         await self.send_notification_data(method, data)
 
